@@ -89,8 +89,16 @@
 
     if (imageFiles.length === 0) {
       summary.textContent = "No photos found. Try picking images from your phone album.";
+      trackEvent("photos_selected_invalid", { attempted_count: Array.from(fileList).length || 0 });
       return;
     }
+
+    const heicCount = imageFiles.filter((file) => isHeic(file)).length;
+    trackEvent("photos_selected", {
+      file_count: imageFiles.length,
+      heic_count: heicCount,
+      output_format: outputFormat,
+    });
 
     imageFiles.forEach((file) => {
       jobs.push({
@@ -123,6 +131,10 @@
       }
 
       job.status = "processing";
+      trackEvent("conversion_started", {
+        output_format: job.format,
+        source_type: isHeic(job.file) ? "heic" : "other_image",
+      });
       render();
 
       try {
@@ -132,9 +144,17 @@
         job.outputName = outputName;
         job.outputUrl = URL.createObjectURL(outputBlob);
         job.status = "done";
+        trackEvent("conversion_success", {
+          output_format: job.format,
+          source_type: isHeic(job.file) ? "heic" : "other_image",
+        });
       } catch (error) {
         job.status = "error";
         job.errorMessage = getErrorMessage(error);
+        trackEvent("conversion_error", {
+          output_format: job.format,
+          error_type: classifyConversionError(error),
+        });
       }
 
       render();
@@ -252,20 +272,37 @@
     return `${withoutExt || "converted-photo"}.${ext}`;
   }
 
-  async function downloadAllAsZip() {
+  async function downloadAllAsZip(source = "download_button") {
     const complete = jobs.filter((job) => job.status === "done" && job.outputBlob);
     if (complete.length === 0) {
       return;
     }
 
     if (complete.length === 1) {
+      trackEvent("download_clicked", {
+        file_count: 1,
+        output_format: complete[0].format,
+        download_type: "single_file",
+        source,
+      });
       triggerDownload(complete[0].outputBlob, complete[0].outputName);
       return;
     }
 
+    trackEvent("download_clicked", {
+      file_count: complete.length,
+      output_format: "mixed_or_batch",
+      download_type: "zip",
+      source,
+    });
+
     if (typeof window.JSZip !== "function") {
       summary.textContent =
         "Could not create ZIP right now. You can still download each photo.";
+      trackEvent("download_error", {
+        download_type: "zip",
+        reason: "zip_library_missing",
+      });
       return;
     }
 
@@ -280,12 +317,21 @@
 
       const zipBlob = await zip.generateAsync({ type: "blob" });
       triggerDownload(zipBlob, `iphone-photo-fix-${dateStamp()}.zip`);
+      trackEvent("download_success", {
+        file_count: complete.length,
+        output_format: "mixed_or_batch",
+        download_type: "zip",
+      });
     } catch (error) {
       summary.textContent =
         "Could not create ZIP for this batch. Try downloading one by one.";
+      trackEvent("download_error", {
+        download_type: "zip",
+        reason: "zip_generation_failed",
+      });
     } finally {
       downloadAllBtn.disabled = false;
-      downloadAllBtn.textContent = "Save All";
+      downloadAllBtn.textContent = "Download ZIP";
     }
   }
 
@@ -294,6 +340,12 @@
     if (complete.length === 0) {
       return;
     }
+
+    trackEvent("share_clicked", {
+      file_count: complete.length,
+      output_format: complete.length === 1 ? complete[0].format : "mixed_or_batch",
+      source: "primary_action",
+    });
 
     if (complete.length === 1) {
       await shareSingleJob(complete[0]);
@@ -309,20 +361,43 @@
           title: "Fixed JPG Photos",
           text: "Ready to send",
         });
+        trackEvent("share_success", {
+          file_count: complete.length,
+          output_format: "mixed_or_batch",
+          method: "native_share",
+        });
         return;
       } catch (error) {
         if (String(error && error.name) === "AbortError") {
+          trackEvent("share_cancelled", {
+            file_count: complete.length,
+            output_format: "mixed_or_batch",
+            method: "native_share",
+          });
           return;
         }
+        trackEvent("share_error", {
+          file_count: complete.length,
+          output_format: "mixed_or_batch",
+          method: "native_share",
+        });
       }
     }
 
     if (complete.length === 1) {
+      trackEvent("share_fallback_download", {
+        file_count: 1,
+        output_format: complete[0].format,
+      });
       triggerDownload(complete[0].outputBlob, complete[0].outputName);
       return;
     }
 
-    await downloadAllAsZip();
+    trackEvent("share_fallback_download", {
+      file_count: complete.length,
+      output_format: "mixed_or_batch",
+    });
+    await downloadAllAsZip("share_fallback");
   }
 
   async function shareSingleJob(job) {
@@ -334,13 +409,32 @@
           title: job.outputName || "Fixed photo",
           text: "Ready to send",
         });
+        trackEvent("share_success", {
+          file_count: 1,
+          output_format: job.format,
+          method: "native_share",
+        });
         return;
       } catch (error) {
         if (String(error && error.name) === "AbortError") {
+          trackEvent("share_cancelled", {
+            file_count: 1,
+            output_format: job.format,
+            method: "native_share",
+          });
           return;
         }
+        trackEvent("share_error", {
+          file_count: 1,
+          output_format: job.format,
+          method: "native_share",
+        });
       }
     }
+    trackEvent("share_fallback_download", {
+      file_count: 1,
+      output_format: job.format,
+    });
     triggerDownload(job.outputBlob, job.outputName);
   }
 
@@ -442,6 +536,37 @@
     return "Could not convert this photo.";
   }
 
+  function classifyConversionError(error) {
+    if (!error) {
+      return "unknown";
+    }
+    const message = String(error.message || error).toLowerCase();
+    if (message.includes("library")) {
+      return "library_load";
+    }
+    if (message.includes("decode")) {
+      return "decode";
+    }
+    if (message.includes("heic")) {
+      return "heic_conversion";
+    }
+    if (message.includes("pdf")) {
+      return "pdf_conversion";
+    }
+    return "other";
+  }
+
+  function trackEvent(name, params) {
+    if (typeof window.gtag !== "function") {
+      return;
+    }
+    try {
+      window.gtag("event", name, params || {});
+    } catch (error) {
+      // Silently ignore analytics errors to avoid impacting conversion flow.
+    }
+  }
+
   function formatBytes(bytes) {
     if (!Number.isFinite(bytes) || bytes <= 0) {
       return "0 B";
@@ -498,6 +623,11 @@
       shareItemBtn.disabled = job.status !== "done";
       shareItemBtn.addEventListener("click", async () => {
         if (job.status === "done") {
+          trackEvent("share_clicked", {
+            file_count: 1,
+            output_format: job.format,
+            source: "file_details",
+          });
           await shareSingleJob(job);
         }
       });
@@ -509,6 +639,12 @@
       downloadBtn.disabled = job.status !== "done";
       downloadBtn.addEventListener("click", () => {
         if (job.outputBlob && job.outputName) {
+          trackEvent("download_clicked", {
+            file_count: 1,
+            output_format: job.format,
+            download_type: "single_file",
+            source: "file_details",
+          });
           triggerDownload(job.outputBlob, job.outputName);
         }
       });
