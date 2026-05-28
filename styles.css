@@ -99,13 +99,13 @@ body {
 
 .privacy-pill {
   margin: 0;
-  padding: 0.33rem 0.62rem;
-  border: 1px solid #cde8d8;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid #e5efe9;
   border-radius: 999px;
-  background: #effff7;
-  color: #0a7a4d;
-  font-size: 0.72rem;
-  font-weight: 600;
+  background: #f8fcfa;
+  color: #5e7e6e;
+  font-size: 0.66rem;
+  font-weight: 500;
   text-align: center;
   white-space: nowrap;
 }
@@ -222,29 +222,32 @@ h1 {
 }
 
 .drop-zone {
-  border: 2px dashed #8ebcff;
+  border: 3px dashed #4698ff;
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, #fafdff 0%, #f3f8ff 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #edf6ff 100%);
   padding: 1.02rem 0.92rem;
   text-align: center;
   outline: none;
-  box-shadow: inset 0 0 0 1px rgba(14, 143, 255, 0.12), 0 8px 20px rgba(14, 143, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(14, 143, 255, 0.26), 0 18px 34px rgba(14, 143, 255, 0.18),
+    0 0 0 6px rgba(14, 143, 255, 0.08);
   transition: border-color 140ms ease, background 140ms ease, transform 140ms ease,
     box-shadow 140ms ease;
 }
 
 .drop-zone:hover,
 .drop-zone:focus-visible {
-  border-color: #2f95ff;
-  background: linear-gradient(180deg, #f9fdff 0%, #f0f8ff 100%);
+  border-color: #157ff5;
+  background: linear-gradient(180deg, #fbfeff 0%, #e5f2ff 100%);
   transform: translateY(-1px);
-  box-shadow: inset 0 0 0 1px rgba(14, 143, 255, 0.2), 0 14px 26px rgba(14, 143, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(14, 143, 255, 0.36), 0 20px 36px rgba(14, 143, 255, 0.24),
+    0 0 0 8px rgba(14, 143, 255, 0.11);
 }
 
 .drop-zone.drag-over {
-  border-color: #1f79f3;
-  background: linear-gradient(180deg, #e9f4ff 0%, #e8f5ff 100%);
-  box-shadow: inset 0 0 0 1px rgba(31, 121, 243, 0.25), 0 14px 28px rgba(31, 121, 243, 0.2);
+  border-color: #0f6cea;
+  background: linear-gradient(180deg, #deefff 0%, #dfedff 100%);
+  box-shadow: inset 0 0 0 1px rgba(19, 111, 241, 0.42), 0 22px 38px rgba(19, 111, 241, 0.28),
+    0 0 0 10px rgba(19, 111, 241, 0.12);
 }
 
 .drop-zone-attention {
@@ -260,10 +263,12 @@ h1 {
 @keyframes dropPulse {
   0%,
   100% {
-    box-shadow: inset 0 0 0 1px rgba(14, 143, 255, 0.12), 0 8px 20px rgba(14, 143, 255, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(14, 143, 255, 0.24), 0 16px 30px rgba(14, 143, 255, 0.18),
+      0 0 0 6px rgba(14, 143, 255, 0.08);
   }
   50% {
-    box-shadow: inset 0 0 0 1px rgba(14, 143, 255, 0.28), 0 14px 30px rgba(14, 143, 255, 0.2);
+    box-shadow: inset 0 0 0 1px rgba(14, 143, 255, 0.5), 0 24px 42px rgba(14, 143, 255, 0.31),
+      0 0 0 12px rgba(14, 143, 255, 0.14);
   }
 }
 
@@ -278,9 +283,10 @@ h1 {
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: #0b70d1;
-  background: #e5f2ff;
-  border: 1px solid #c8e2ff;
+  color: #0a58a3;
+  background: linear-gradient(180deg, #d7ebff 0%, #cce4ff 100%);
+  border: 1px solid #9ec9ff;
+  box-shadow: 0 6px 14px rgba(14, 143, 255, 0.2);
 }
 
 .drop-title {
@@ -289,11 +295,12 @@ h1 {
   font-size: 1.4rem;
   font-weight: 700;
   line-height: 1.08;
+  color: #0f264a;
 }
 
 .drop-subtitle {
   margin: 0.44rem auto 0;
-  color: var(--muted);
+  color: #4b5b78;
   font-size: 1rem;
   max-width: 19ch;
 }
@@ -680,8 +687,8 @@ h1 {
   }
 
   .privacy-pill {
-    font-size: 0.78rem;
-    padding: 0.4rem 0.7rem;
+    font-size: 0.73rem;
+    padding: 0.34rem 0.62rem;
   }
 
   .hero {
