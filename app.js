@@ -6,6 +6,11 @@
   const dropZone = document.getElementById("dropZone");
   const dropTitle = document.getElementById("dropTitle");
   const thumbStrip = document.getElementById("thumbStrip");
+  const progressWrap = document.getElementById("progressWrap");
+  const progressLabel = document.getElementById("progressLabel");
+  const progressPercent = document.getElementById("progressPercent");
+  const progressFill = document.getElementById("progressFill");
+  const progressEta = document.getElementById("progressEta");
   const formatSelect = document.getElementById("formatSelect");
   const resultsList = document.getElementById("resultsList");
   const summary = document.getElementById("summary");
@@ -18,9 +23,14 @@
   const detailsPanel = document.getElementById("detailsPanel");
   const yearEl = document.getElementById("year");
 
+  const MAX_FILES_PER_BATCH = 60;
+  const SLOW_BATCH_HINT_THRESHOLD = 20;
+
   const jobs = [];
   let isProcessing = false;
   let outputFormat = "jpg";
+  let activeBatchId = "";
+  let activeBatchStartedAt = 0;
 
   const formatMeta = {
     jpg: { label: "JPG", mime: "image/jpeg", ext: "jpg" },
@@ -83,26 +93,44 @@
   });
 
   function queueFiles(fileList) {
-    const imageFiles = Array.from(fileList).filter((file) =>
+    const selectedFiles = Array.from(fileList);
+    const imageFiles = selectedFiles.filter((file) =>
       file.type.startsWith("image/") || hasHeicLikeExtension(file.name)
     );
 
     if (imageFiles.length === 0) {
       summary.textContent = "No photos found. Try picking images from your phone album.";
-      trackEvent("photos_selected_invalid", { attempted_count: Array.from(fileList).length || 0 });
+      trackEvent("photos_selected_invalid", { attempted_count: selectedFiles.length || 0 });
       return;
     }
 
-    const heicCount = imageFiles.filter((file) => isHeic(file)).length;
+    let filesToQueue = imageFiles;
+    if (imageFiles.length > MAX_FILES_PER_BATCH) {
+      filesToQueue = imageFiles.slice(0, MAX_FILES_PER_BATCH);
+      summary.textContent = `Added first ${MAX_FILES_PER_BATCH} photos. For best speed, do large batches in smaller groups.`;
+      trackEvent("photos_batch_limited", {
+        selected_count: imageFiles.length,
+        accepted_count: filesToQueue.length,
+      });
+    }
+
+    const hasPendingJobs = jobs.some((job) => job.status === "queued" || job.status === "processing");
+    if (!hasPendingJobs) {
+      activeBatchId = crypto.randomUUID();
+      activeBatchStartedAt = Date.now();
+    }
+
+    const heicCount = filesToQueue.filter((file) => isHeic(file)).length;
     trackEvent("photos_selected", {
-      file_count: imageFiles.length,
+      file_count: filesToQueue.length,
       heic_count: heicCount,
       output_format: outputFormat,
     });
 
-    imageFiles.forEach((file) => {
+    filesToQueue.forEach((file) => {
       jobs.push({
         id: crypto.randomUUID(),
+        batchId: activeBatchId,
         file,
         format: outputFormat,
         sourcePreviewUrl: shouldCreateSourcePreview(file) ? URL.createObjectURL(file) : "",
@@ -121,6 +149,10 @@
   async function processQueue() {
     if (isProcessing) {
       return;
+    }
+
+    if (!activeBatchStartedAt) {
+      activeBatchStartedAt = Date.now();
     }
 
     isProcessing = true;
@@ -501,6 +533,8 @@
       }
     });
     jobs.length = 0;
+    activeBatchId = "";
+    activeBatchStartedAt = 0;
     render();
   }
 
@@ -575,6 +609,28 @@
     const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
     const value = bytes / Math.pow(1024, unitIndex);
     return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+  }
+
+  function formatEta(seconds) {
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      return "Less than a second";
+    }
+    if (seconds < 60) {
+      return `${Math.max(1, Math.round(seconds))} sec`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.round(seconds % 60);
+    if (remainingSeconds === 0) {
+      return `${minutes} min`;
+    }
+    return `${minutes} min ${remainingSeconds} sec`;
+  }
+
+  function getActiveBatchJobs() {
+    if (!activeBatchId) {
+      return [];
+    }
+    return jobs.filter((job) => job.batchId === activeBatchId);
   }
 
   function render() {
@@ -658,6 +714,14 @@
     const errorCount = jobs.filter((job) => job.status === "error").length;
     const processingCount = jobs.filter((job) => job.status === "processing").length;
     const queuedCount = jobs.filter((job) => job.status === "queued").length;
+    const activeBatchJobs = getActiveBatchJobs();
+    const batchTotal = activeBatchJobs.length;
+    const batchDoneCount = activeBatchJobs.filter((job) => job.status === "done").length;
+    const batchErrorCount = activeBatchJobs.filter((job) => job.status === "error").length;
+    const batchProcessingCount = activeBatchJobs.filter((job) => job.status === "processing").length;
+    const batchQueuedCount = activeBatchJobs.filter((job) => job.status === "queued").length;
+    const batchFinishedCount = batchDoneCount + batchErrorCount;
+    const isBatchInProgress = batchTotal > 0 && (batchProcessingCount > 0 || batchQueuedCount > 0);
 
     const canShare = hasNativeFileShareCapability();
     const showSingleActionCopy = doneCount === 1;
@@ -670,8 +734,10 @@
       actionHint.textContent = "";
       clearBtn.classList.add("is-hidden");
     } else if (processingCount > 0 || queuedCount > 0) {
-      summary.textContent = `Working on your photos... ${doneCount} ready${
-        errorCount > 0 ? `, ${errorCount} skipped` : ""
+      const summaryDone = batchTotal > 0 ? batchDoneCount : doneCount;
+      const summaryErrors = batchTotal > 0 ? batchErrorCount : errorCount;
+      summary.textContent = `Working on your photos... ${summaryDone} ready${
+        summaryErrors > 0 ? `, ${summaryErrors} skipped` : ""
       }.`;
       actionHint.classList.add("is-hidden");
       actionHint.textContent = "";
@@ -694,6 +760,35 @@
         actionHint.textContent = "";
       }
       clearBtn.classList.remove("is-hidden");
+    }
+
+    if (isBatchInProgress) {
+      const percent = Math.max(0, Math.min(100, Math.round((batchFinishedCount / batchTotal) * 100)));
+      const elapsedSeconds = Math.max(1, (Date.now() - activeBatchStartedAt) / 1000);
+      const averageSecondsPerPhoto = batchFinishedCount > 0 ? elapsedSeconds / batchFinishedCount : 0;
+      const remainingPhotos = Math.max(0, batchTotal - batchFinishedCount);
+      const etaSeconds = averageSecondsPerPhoto > 0 ? averageSecondsPerPhoto * remainingPhotos : 0;
+      const processingLabel = `Fixing photos (${batchFinishedCount}/${batchTotal})`;
+
+      progressWrap.classList.remove("is-hidden");
+      progressLabel.textContent = processingLabel;
+      progressPercent.textContent = `${percent}%`;
+      progressFill.style.width = `${percent}%`;
+      progressFill.parentElement?.setAttribute("aria-valuenow", String(percent));
+      progressEta.textContent =
+        batchFinishedCount === 0
+          ? "Estimating time..."
+          : `About ${formatEta(etaSeconds)} remaining`;
+    } else {
+      progressWrap.classList.add("is-hidden");
+      progressLabel.textContent = "Fixing photos...";
+      progressPercent.textContent = "0%";
+      progressFill.style.width = "0%";
+      progressFill.parentElement?.setAttribute("aria-valuenow", "0");
+      progressEta.textContent =
+        jobs.length > SLOW_BATCH_HINT_THRESHOLD
+          ? `Tip: Large batches can take longer on phones. ${SLOW_BATCH_HINT_THRESHOLD} at a time is usually fastest.`
+          : "Estimating time...";
     }
 
     afterActions.classList.toggle("is-hidden", jobs.length === 0);
