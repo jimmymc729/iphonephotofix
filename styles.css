@@ -355,6 +355,7 @@ h1 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.62rem;
+  align-items: stretch;
 }
 
 .after-actions.sticky-actions {
@@ -446,6 +447,33 @@ h1 {
   font-weight: 800;
 }
 
+.thumb-more-btn {
+  cursor: pointer;
+  border: 1px solid #c8d9fb;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.thumb-more-btn:hover,
+.thumb-more-btn:focus-visible {
+  background: #dbe7ff;
+  box-shadow: 0 8px 16px rgba(20, 90, 170, 0.2);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.details-panel-pulse {
+  animation: detailsPanelPulse 620ms ease;
+}
+
+@keyframes detailsPanelPulse {
+  0% {
+    background: rgba(34, 112, 219, 0.08);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
 .progress-wrap {
   margin-top: 0.66rem;
   padding: 0.64rem 0.68rem;
@@ -509,11 +537,31 @@ h1 {
 }
 
 .ghost-btn {
-  min-height: 44px;
+  min-height: 56px;
   border: 1px solid var(--line);
   background: var(--white);
   color: var(--ink-2);
   transition: border-color 130ms ease, background 130ms ease;
+}
+
+.after-actions .ghost-btn {
+  width: 100%;
+}
+
+.after-actions .primary-btn,
+.after-actions .ghost-btn {
+  margin: 0;
+  width: 100%;
+  height: 56px;
+  min-height: 56px;
+  padding: 0 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.after-actions .primary-btn {
+  box-shadow: 0 8px 18px rgba(14, 143, 255, 0.28);
 }
 
 .ghost-btn:hover:enabled {
@@ -580,6 +628,43 @@ h1 {
   background: #fbfbff;
   border-radius: var(--radius-md);
   padding: 0.72rem 0.75rem;
+}
+
+.result-main {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 0.58rem;
+  align-items: start;
+}
+
+.result-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #e8edf8;
+  border: 1px solid #d6dff3;
+}
+
+.result-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.result-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #60708d;
+}
+
+.result-meta {
+  min-width: 0;
 }
 
 .name-line {

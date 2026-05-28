@@ -25,12 +25,14 @@
 
   const MAX_FILES_PER_BATCH = 60;
   const SLOW_BATCH_HINT_THRESHOLD = 20;
+  const NATIVE_SHARE_BATCH_LIMIT = 10;
 
   const jobs = [];
   let isProcessing = false;
   let outputFormat = "jpg";
   let activeBatchId = "";
   let activeBatchStartedAt = 0;
+  let shareNotice = "";
 
   const formatMeta = {
     jpg: { label: "JPG", mime: "image/jpeg", ext: "jpg" },
@@ -93,6 +95,7 @@
   });
 
   function queueFiles(fileList) {
+    shareNotice = "";
     const selectedFiles = Array.from(fileList);
     const imageFiles = selectedFiles.filter((file) =>
       file.type.startsWith("image/") || hasHeicLikeExtension(file.name)
@@ -380,11 +383,25 @@
     });
 
     if (complete.length === 1) {
+      shareNotice = "";
       await shareSingleJob(complete[0]);
+      render();
       return;
     }
 
     const files = complete.map((job) => buildShareFile(job));
+
+    if (complete.length > NATIVE_SHARE_BATCH_LIMIT) {
+      shareNotice = `Large batch: downloaded ZIP (${complete.length} files). Use per-file "Share or Save" if you want the share menu.`;
+      trackEvent("share_fallback_download", {
+        file_count: complete.length,
+        output_format: "mixed_or_batch",
+        reason: "batch_too_large",
+      });
+      await downloadAllAsZip("share_fallback");
+      render();
+      return;
+    }
 
     if (canUseNativeFileShare(files)) {
       try {
@@ -393,21 +410,26 @@
           title: "Fixed JPG Photos",
           text: "Ready to send",
         });
+        shareNotice = "";
         trackEvent("share_success", {
           file_count: complete.length,
           output_format: "mixed_or_batch",
           method: "native_share",
         });
+        render();
         return;
       } catch (error) {
         if (String(error && error.name) === "AbortError") {
+          shareNotice = "";
           trackEvent("share_cancelled", {
             file_count: complete.length,
             output_format: "mixed_or_batch",
             method: "native_share",
           });
+          render();
           return;
         }
+        shareNotice = "Could not open the share sheet, so we downloaded a ZIP instead.";
         trackEvent("share_error", {
           file_count: complete.length,
           output_format: "mixed_or_batch",
@@ -429,7 +451,11 @@
       file_count: complete.length,
       output_format: "mixed_or_batch",
     });
+    if (!shareNotice) {
+      shareNotice = "This browser cannot share this batch directly, so we downloaded a ZIP.";
+    }
     await downloadAllAsZip("share_fallback");
+    render();
   }
 
   async function shareSingleJob(job) {
@@ -441,21 +467,26 @@
           title: job.outputName || "Fixed photo",
           text: "Ready to send",
         });
+        shareNotice = "";
         trackEvent("share_success", {
           file_count: 1,
           output_format: job.format,
           method: "native_share",
         });
+        render();
         return;
       } catch (error) {
         if (String(error && error.name) === "AbortError") {
+          shareNotice = "";
           trackEvent("share_cancelled", {
             file_count: 1,
             output_format: job.format,
             method: "native_share",
           });
+          render();
           return;
         }
+        shareNotice = "Could not open share options. Downloaded file instead.";
         trackEvent("share_error", {
           file_count: 1,
           output_format: job.format,
@@ -468,6 +499,7 @@
       output_format: job.format,
     });
     triggerDownload(job.outputBlob, job.outputName);
+    render();
   }
 
   function buildShareFile(job) {
@@ -535,6 +567,7 @@
     jobs.length = 0;
     activeBatchId = "";
     activeBatchStartedAt = 0;
+    shareNotice = "";
     render();
   }
 
@@ -642,6 +675,33 @@
       li.className = "result-item";
 
       const left = document.createElement("div");
+      left.className = "result-main";
+
+      const thumb = document.createElement("div");
+      thumb.className = "result-thumb";
+
+      if (job.status === "done" && isImageFileName(job.outputName) && job.outputUrl) {
+        const img = document.createElement("img");
+        img.src = job.outputUrl;
+        img.alt = job.outputName || "Converted photo";
+        img.loading = "lazy";
+        thumb.append(img);
+      } else if (job.sourcePreviewUrl) {
+        const img = document.createElement("img");
+        img.src = job.sourcePreviewUrl;
+        img.alt = job.file.name || "Selected photo";
+        img.loading = "lazy";
+        thumb.append(img);
+      } else {
+        const placeholder = document.createElement("span");
+        placeholder.className = "result-thumb-placeholder";
+        placeholder.textContent = "IMG";
+        thumb.append(placeholder);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "result-meta";
+
       const nameLine = document.createElement("p");
       nameLine.className = "name-line";
       nameLine.textContent = job.outputName || job.file.name;
@@ -667,7 +727,8 @@
         statusLine.textContent = job.errorMessage || "Could not convert this photo.";
       }
 
-      left.append(nameLine, metaLine, statusLine);
+      meta.append(nameLine, metaLine, statusLine);
+      left.append(thumb, meta);
 
       const actionGroup = document.createElement("div");
       actionGroup.className = "item-actions";
@@ -749,11 +810,15 @@
           : "We could not fix these photos. Try another image.";
 
       if (doneCount > 0) {
-        actionHint.textContent = canShare
-          ? isAppleMobileDevice()
-            ? "Next: tap Share or Save above. On iPhone, choose Save Image in the share menu."
-            : "Next: tap Share or Save above."
-          : "Next: tap Download above.";
+        if (!canShare) {
+          actionHint.textContent = "Next: tap Download above.";
+        } else if (doneCount > NATIVE_SHARE_BATCH_LIMIT) {
+          actionHint.textContent = `Tip: Share menu is best for up to ${NATIVE_SHARE_BATCH_LIMIT} files. Larger batches download as ZIP.`;
+        } else if (isAppleMobileDevice()) {
+          actionHint.textContent = "Next: tap Share or Save above. On iPhone, choose Save Image in the share menu.";
+        } else {
+          actionHint.textContent = "Next: tap Share or Save above.";
+        }
         actionHint.classList.remove("is-hidden");
       } else {
         actionHint.classList.add("is-hidden");
@@ -797,11 +862,15 @@
     dropZone.classList.toggle("drop-zone-attention", jobs.length === 0);
     thumbStrip.classList.toggle("is-hidden", jobs.length === 0);
 
-    const showShareFallback = doneCount > 0 && !canShare;
+    const showShareFallback = doneCount > 0 && (!canShare || Boolean(shareNotice));
     shareFallback.classList.toggle("is-hidden", !showShareFallback);
-    shareFallback.textContent = showShareFallback
-      ? "Share is not supported here. Tap Download, then send from Photos or Files."
-      : "";
+    if (showShareFallback) {
+      shareFallback.textContent = !canShare
+        ? "Share is not supported here. Tap Download, then send from Photos or Files."
+        : shareNotice;
+    } else {
+      shareFallback.textContent = "";
+    }
 
     if (jobs.length > 0) {
       const stripTitle = document.createElement("p");
@@ -847,9 +916,18 @@
       });
 
       if (jobs.length > 6) {
-        const more = document.createElement("div");
-        more.className = "thumb-more";
+        const more = document.createElement("button");
+        more.className = "thumb-more thumb-more-btn";
+        more.type = "button";
         more.textContent = `+${jobs.length - 6}`;
+        more.setAttribute("aria-label", `Show ${jobs.length - 6} more photos in file details`);
+        more.addEventListener("click", () => {
+          detailsPanel.open = true;
+          detailsPanel.classList.remove("details-panel-pulse");
+          void detailsPanel.offsetWidth;
+          detailsPanel.classList.add("details-panel-pulse");
+          detailsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
         grid.append(more);
       }
 
