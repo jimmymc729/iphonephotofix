@@ -73,7 +73,7 @@
   });
 
   clearBtn.addEventListener("click", clearAll);
-  downloadAllBtn.addEventListener("click", downloadAllAsZip);
+  downloadAllBtn.addEventListener("click", handleSaveAction);
   shareBtn.addEventListener("click", shareFixedPhotos);
   formatSelect.addEventListener("change", () => {
     outputFormat = sanitizeFormat(formatSelect.value);
@@ -289,6 +289,20 @@
     }
   }
 
+  async function handleSaveAction() {
+    const complete = jobs.filter((job) => job.status === "done" && job.outputBlob);
+    if (complete.length === 0) {
+      return;
+    }
+
+    if (complete.length === 1) {
+      await saveSingleJob(complete[0]);
+      return;
+    }
+
+    await downloadAllAsZip();
+  }
+
   async function shareFixedPhotos() {
     const complete = jobs.filter((job) => job.status === "done" && job.outputBlob);
     if (complete.length === 0) {
@@ -344,6 +358,27 @@
     triggerDownload(job.outputBlob, job.outputName);
   }
 
+  async function saveSingleJob(job) {
+    const file = buildShareFile(job);
+
+    if (canUsePhotoSaveFlow(job) && canUseNativeFileShare([file])) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: job.outputName || "Fixed photo",
+          text: "Tap Save Image to add it to Photos.",
+        });
+        return;
+      } catch (error) {
+        if (String(error && error.name) === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    triggerDownload(job.outputBlob, job.outputName);
+  }
+
   function buildShareFile(job) {
     return new File([job.outputBlob], job.outputName || "converted-photo.jpg", {
       type: getMimeFromName(job.outputName),
@@ -363,6 +398,25 @@
 
   function hasNativeFileShareCapability() {
     return typeof navigator.share === "function" && typeof navigator.canShare === "function";
+  }
+
+  function canUsePhotoSaveFlow(job) {
+    if (!job || !job.outputName || !job.outputBlob) {
+      return false;
+    }
+    if (!isAppleMobileDevice()) {
+      return false;
+    }
+    return getMimeFromName(job.outputName).startsWith("image/");
+  }
+
+  function isAppleMobileDevice() {
+    const ua = navigator.userAgent || "";
+    const platform = navigator.platform || "";
+    const touchPoints = Number(navigator.maxTouchPoints || 0);
+    const iosDevice = /iPhone|iPad|iPod/i.test(ua);
+    const ipadDesktopUa = platform === "MacIntel" && touchPoints > 1;
+    return iosDevice || ipadDesktopUa;
   }
 
   function getMimeFromName(filename) {
@@ -496,11 +550,11 @@
       const downloadBtn = document.createElement("button");
       downloadBtn.className = "download-btn";
       downloadBtn.type = "button";
-      downloadBtn.textContent = "Save";
+      downloadBtn.textContent = canUsePhotoSaveFlow(job) ? "Save to Photos" : "Save";
       downloadBtn.disabled = job.status !== "done";
-      downloadBtn.addEventListener("click", () => {
+      downloadBtn.addEventListener("click", async () => {
         if (job.outputBlob && job.outputName) {
-          triggerDownload(job.outputBlob, job.outputName);
+          await saveSingleJob(job);
         }
       });
 
@@ -515,8 +569,11 @@
     const queuedCount = jobs.filter((job) => job.status === "queued").length;
 
     const canShare = hasNativeFileShareCapability();
+    const firstDoneJob = jobs.find((job) => job.status === "done" && job.outputBlob);
+    const showSaveToPhotos = doneCount === 1 && canUsePhotoSaveFlow(firstDoneJob);
     shareBtn.textContent = "Share";
-    downloadAllBtn.textContent = doneCount <= 1 ? "Save" : "Save All";
+    downloadAllBtn.textContent =
+      doneCount <= 1 ? (showSaveToPhotos ? "Save to Photos" : "Save") : "Save All";
 
     if (jobs.length === 0) {
       summary.textContent = "Step 1: Pick your photos to get started.";
@@ -538,7 +595,9 @@
 
       if (doneCount > 0) {
         actionHint.textContent = canShare
-          ? "Next: tap Share or Save above."
+          ? showSaveToPhotos
+            ? "Next: tap Save to Photos or Share above."
+            : "Next: tap Share or Save above."
           : "Next: tap Save above.";
         actionHint.classList.remove("is-hidden");
       } else {
