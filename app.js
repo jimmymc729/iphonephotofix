@@ -73,7 +73,7 @@
   });
 
   clearBtn.addEventListener("click", clearAll);
-  downloadAllBtn.addEventListener("click", handleSaveAction);
+  downloadAllBtn.addEventListener("click", downloadAllAsZip);
   shareBtn.addEventListener("click", shareFixedPhotos);
   formatSelect.addEventListener("change", () => {
     outputFormat = sanitizeFormat(formatSelect.value);
@@ -289,20 +289,6 @@
     }
   }
 
-  async function handleSaveAction() {
-    const complete = jobs.filter((job) => job.status === "done" && job.outputBlob);
-    if (complete.length === 0) {
-      return;
-    }
-
-    if (complete.length === 1) {
-      await saveSingleJob(complete[0]);
-      return;
-    }
-
-    await downloadAllAsZip();
-  }
-
   async function shareFixedPhotos() {
     const complete = jobs.filter((job) => job.status === "done" && job.outputBlob);
     if (complete.length === 0) {
@@ -358,27 +344,6 @@
     triggerDownload(job.outputBlob, job.outputName);
   }
 
-  async function saveSingleJob(job) {
-    const file = buildShareFile(job);
-
-    if (canUsePhotoSaveFlow(job) && canUseNativeFileShare([file])) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: job.outputName || "Fixed photo",
-          text: "Tap Save Image to add it to Photos.",
-        });
-        return;
-      } catch (error) {
-        if (String(error && error.name) === "AbortError") {
-          return;
-        }
-      }
-    }
-
-    triggerDownload(job.outputBlob, job.outputName);
-  }
-
   function buildShareFile(job) {
     return new File([job.outputBlob], job.outputName || "converted-photo.jpg", {
       type: getMimeFromName(job.outputName),
@@ -398,16 +363,6 @@
 
   function hasNativeFileShareCapability() {
     return typeof navigator.share === "function" && typeof navigator.canShare === "function";
-  }
-
-  function canUsePhotoSaveFlow(job) {
-    if (!job || !job.outputName || !job.outputBlob) {
-      return false;
-    }
-    if (!isAppleMobileDevice()) {
-      return false;
-    }
-    return getMimeFromName(job.outputName).startsWith("image/");
   }
 
   function isAppleMobileDevice() {
@@ -539,7 +494,7 @@
       const shareItemBtn = document.createElement("button");
       shareItemBtn.className = "share-btn";
       shareItemBtn.type = "button";
-      shareItemBtn.textContent = "Share";
+      shareItemBtn.textContent = "Share or Save";
       shareItemBtn.disabled = job.status !== "done";
       shareItemBtn.addEventListener("click", async () => {
         if (job.status === "done") {
@@ -550,11 +505,11 @@
       const downloadBtn = document.createElement("button");
       downloadBtn.className = "download-btn";
       downloadBtn.type = "button";
-      downloadBtn.textContent = canUsePhotoSaveFlow(job) ? "Save to Photos" : "Save";
+      downloadBtn.textContent = "Download";
       downloadBtn.disabled = job.status !== "done";
-      downloadBtn.addEventListener("click", async () => {
+      downloadBtn.addEventListener("click", () => {
         if (job.outputBlob && job.outputName) {
-          await saveSingleJob(job);
+          triggerDownload(job.outputBlob, job.outputName);
         }
       });
 
@@ -569,11 +524,9 @@
     const queuedCount = jobs.filter((job) => job.status === "queued").length;
 
     const canShare = hasNativeFileShareCapability();
-    const firstDoneJob = jobs.find((job) => job.status === "done" && job.outputBlob);
-    const showSaveToPhotos = doneCount === 1 && canUsePhotoSaveFlow(firstDoneJob);
-    shareBtn.textContent = "Share";
-    downloadAllBtn.textContent =
-      doneCount <= 1 ? (showSaveToPhotos ? "Save to Photos" : "Save") : "Save All";
+    const showSingleActionCopy = doneCount === 1;
+    shareBtn.textContent = showSingleActionCopy ? "Share or Save" : "Share";
+    downloadAllBtn.textContent = showSingleActionCopy ? "Download" : "Download ZIP";
 
     if (jobs.length === 0) {
       summary.textContent = "Step 1: Pick your photos to get started.";
@@ -595,10 +548,10 @@
 
       if (doneCount > 0) {
         actionHint.textContent = canShare
-          ? showSaveToPhotos
-            ? "Next: tap Save to Photos or Share above."
+          ? isAppleMobileDevice()
+            ? "Next: tap Share or Save above. On iPhone, choose Save Image in the share menu."
             : "Next: tap Share or Save above."
-          : "Next: tap Save above.";
+          : "Next: tap Download above.";
         actionHint.classList.remove("is-hidden");
       } else {
         actionHint.classList.add("is-hidden");
@@ -616,7 +569,7 @@
     const showShareFallback = doneCount > 0 && !canShare;
     shareFallback.classList.toggle("is-hidden", !showShareFallback);
     shareFallback.textContent = showShareFallback
-      ? "Share is not supported here. Tap Save, then send from Photos or Files."
+      ? "Share is not supported here. Tap Download, then send from Photos or Files."
       : "";
 
     if (jobs.length > 0) {
