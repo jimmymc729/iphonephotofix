@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iPhone Photo Fix | Convert HEIC to JPG, PNG, WebP, PDF</title>
+    <meta
+      name="description"
+      content="Convert HEIC iPhone photos to JPG, PNG, WebP, or PDF on your device. Private, fast, and built for easy sharing."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Public+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-glow page-glow-a" aria-hidden="true"></div>
+    <div class="page-glow page-glow-b" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <div class="brand-wrap">
+        <div class="brand-dot" aria-hidden="true"></div>
+        <p class="brand">iPhone Photo Fix</p>
+      </div>
+      <p class="privacy-pill">Private on your device</p>
+    </header>
+
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Fix in about 15 seconds</p>
+        <h1>iPhone photo not uploading? Fix it in seconds.</h1>
+        <p class="hero-copy">
+          Convert HEIC iPhone photos to JPG, PNG, WebP, or PDF right on your device.
+        </p>
+        <p class="hero-note">Live Photos: this tool converts the still image.</p>
+      </section>
+
+      <section class="converter-card">
+        <ol class="steps" aria-label="How it works">
+          <li><span>1</span>Pick photos</li>
+          <li><span>2</span>We fix format</li>
+          <li><span>3</span>Share or save</li>
+        </ol>
+
+        <div class="format-row">
+          <label for="formatSelect" class="format-label">Output format</label>
+          <select id="formatSelect" class="format-select">
+            <option value="jpg">JPG - Best for sharing</option>
+            <option value="png">PNG - Best quality</option>
+            <option value="webp">WebP - Smaller file size</option>
+            <option value="pdf">PDF - Best for printing</option>
+          </select>
+        </div>
+
+        <div
+          id="dropZone"
+          class="drop-zone drop-zone-attention"
+          role="button"
+          tabindex="0"
+          aria-label="Choose photos to convert"
+        >
+          <input
+            id="fileInput"
+            type="file"
+            accept=".heic,.heif,image/heic,image/heif,image/*"
+            multiple
+            hidden
+          />
+          <p class="start-here-pill">Start here</p>
+          <p id="dropTitle" class="drop-title">Tap or drag photos here</p>
+          <p class="drop-subtitle">Choose from your device, or drag and drop from desktop</p>
+          <button id="chooseBtn" class="primary-btn" type="button">
+            Pick Photos
+          </button>
+          <p class="drop-note">
+            Your photos stay private on this device.
+          </p>
+        </div>
+
+        <div id="thumbStrip" class="thumb-strip is-hidden" aria-live="polite"></div>
+
+        <div id="afterActions" class="after-actions is-hidden">
+          <button id="shareBtn" class="primary-btn action-primary" type="button" disabled>
+            Share
+          </button>
+          <button id="downloadAllBtn" class="ghost-btn" type="button" disabled>
+            Save
+          </button>
+        </div>
+        <p id="shareFallback" class="share-fallback is-hidden" aria-live="polite"></p>
+
+        <div id="summary" class="summary" aria-live="polite">
+          Step 1: Pick your photos to get started.
+        </div>
+        <p id="actionHint" class="action-hint is-hidden" aria-live="polite"></p>
+        <button id="clearBtn" class="text-link-btn is-hidden" type="button" disabled>
+          Start over with different photos
+        </button>
+
+        <details id="detailsPanel" class="details-panel">
+          <summary>See file details</summary>
+          <ul id="resultsList" class="results-list" aria-live="polite"></ul>
+        </details>
+      </section>
+
+      <section class="trust-grid">
+        <article>
+          <h2>Private by default</h2>
+          <p>Your photos stay in your browser. Nothing is stored on our server.</p>
+        </article>
+        <article>
+          <h2>Built for busy moments</h2>
+          <p>Fast workflow for school, work, listings, social posts, and forms.</p>
+        </article>
+        <article>
+          <h2>Mobile-first flow</h2>
+          <p>Select, convert, save. Large buttons and simple copy for phone use.</p>
+        </article>
+      </section>
+
+      <section class="faq">
+        <h2>Quick Answers</h2>
+        <details>
+          <summary>What is HEIC?</summary>
+          <p>HEIC is Apple’s image format. Some apps and websites do not accept it.</p>
+        </details>
+        <details>
+          <summary>Does this convert Live Photos?</summary>
+          <p>It converts the still image from a Live Photo. Motion/video is not included.</p>
+        </details>
+        <details>
+          <summary>How do I share converted photos?</summary>
+          <p>Tap Share if available. If not, tap Save, then send from Photos or Files.</p>
+        </details>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>© <span id="year"></span> iPhone Photo Fix</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
