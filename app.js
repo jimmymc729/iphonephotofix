@@ -33,6 +33,7 @@
   let activeBatchId = "";
   let activeBatchStartedAt = 0;
   let shareNotice = "";
+  const trackedBatchCompletions = new Set();
 
   const formatMeta = {
     jpg: { label: "JPG", mime: "image/jpeg", ext: "jpg" },
@@ -568,7 +569,42 @@
     activeBatchId = "";
     activeBatchStartedAt = 0;
     shareNotice = "";
+    trackedBatchCompletions.clear();
     render();
+  }
+
+  function maybeTrackBatchCompletions() {
+    const seenBatchIds = new Set(jobs.map((job) => job.batchId).filter(Boolean));
+
+    seenBatchIds.forEach((batchId) => {
+      if (trackedBatchCompletions.has(batchId)) {
+        return;
+      }
+
+      const batchJobs = jobs.filter((job) => job.batchId === batchId);
+      if (batchJobs.length === 0) {
+        return;
+      }
+
+      const allFinished = batchJobs.every((job) => job.status === "done" || job.status === "error");
+      if (!allFinished) {
+        return;
+      }
+
+      const successCount = batchJobs.filter((job) => job.status === "done").length;
+      const errorCount = batchJobs.filter((job) => job.status === "error").length;
+      const dominantFormat = batchJobs[0]?.format || outputFormat;
+
+      trackedBatchCompletions.add(batchId);
+      trackEvent("batch_completed", {
+        batch_id: batchId,
+        file_count: batchJobs.length,
+        success_count: successCount,
+        error_count: errorCount,
+        success_rate: Math.round((successCount / batchJobs.length) * 100),
+        output_format: dominantFormat,
+      });
+    });
   }
 
   function triggerDownload(blob, filename) {
@@ -937,6 +973,7 @@
     shareBtn.disabled = doneCount === 0 || isProcessing || !canShare;
     clearBtn.disabled = jobs.length === 0 || isProcessing;
     downloadAllBtn.disabled = doneCount === 0 || isProcessing;
+    maybeTrackBatchCompletions();
   }
 
   function shouldCreateSourcePreview(file) {

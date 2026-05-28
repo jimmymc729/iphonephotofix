@@ -804,6 +804,137 @@ h1 {
   font-size: 0.86rem;
 }
 
+.guides {
+  margin-top: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid #dce5f7;
+  background: rgba(255, 255, 255, 0.62);
+  padding: 0.62rem 0.78rem;
+}
+
+.guides summary {
+  cursor: pointer;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: #233355;
+  font-family: "Outfit", "Avenir Next", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.guides summary::-webkit-details-marker {
+  display: none;
+}
+
+.guides summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 0.4rem;
+  color: #5b6a86;
+  transition: transform 130ms ease;
+}
+
+.guides[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.guides-content {
+  margin-top: 0.48rem;
+}
+
+.guides-intro {
+  margin: 0;
+  color: #4f5973;
+  font-size: 0.86rem;
+}
+
+.guides-list {
+  margin: 0;
+  padding: 0 0 0 1rem;
+  display: grid;
+  gap: 0.36rem;
+}
+
+.guides-list a {
+  color: #195fb2;
+  font-weight: 600;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+
+.guide-card {
+  margin-top: 1rem;
+  border-radius: 16px;
+  border: 1px solid #dce5f7;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0.95rem;
+  box-shadow: var(--shadow-2);
+}
+
+.guide-card h1 {
+  margin: 0;
+  max-width: 25ch;
+  font-size: clamp(1.55rem, 8.2vw, 2.25rem);
+}
+
+.guide-card p {
+  margin: 0.65rem 0 0;
+  color: var(--ink-2);
+  font-size: 0.96rem;
+}
+
+.guide-hero {
+  margin: 0.72rem 0 0.5rem;
+  width: min(100%, 440px);
+}
+
+.guide-hero img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #e2e8f8;
+}
+
+.guide-hero figcaption {
+  margin-top: 0.28rem;
+  font-size: 0.74rem;
+  color: #667089;
+}
+
+.guide-card h2 {
+  margin: 1rem 0 0.4rem;
+  font-family: "Outfit", "Avenir Next", sans-serif;
+  font-size: 1.1rem;
+}
+
+.guide-card ul,
+.guide-card ol {
+  margin: 0;
+  padding-left: 1.05rem;
+  color: var(--ink-2);
+  display: grid;
+  gap: 0.3rem;
+}
+
+.guide-card a {
+  color: #195fb2;
+  font-weight: 600;
+}
+
+.guide-back {
+  margin-top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34rem;
+  color: #195fb2;
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .site-footer {
   margin-top: 1rem;
   text-align: center;
@@ -955,6 +1086,20 @@ h1 {
   .faq {
     margin-top: 1.25rem;
     padding: 0.95rem;
+  }
+
+  .guides {
+    margin-top: 1rem;
+    padding: 0.72rem 0.95rem;
+  }
+
+  .guide-card {
+    margin-top: 1.3rem;
+    padding: 1.15rem;
+  }
+
+  .guide-hero {
+    width: min(100%, 360px);
   }
 
   .result-item {

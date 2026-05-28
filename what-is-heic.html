@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>What Is HEIC? | iPhone Photo Fix</title>
+    <meta
+      name="description"
+      content="Simple explanation of HEIC image files, why iPhone uses them, and when to convert to JPG, PNG, WebP, or PDF."
+    />
+    <link rel="canonical" href="https://iphonephotofix.com/what-is-heic.html" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="shortcut icon" href="./favicon.svg" />
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HJFX2PXY0C"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-HJFX2PXY0C');
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Public+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="brand-wrap">
+        <div class="brand-dot" aria-hidden="true"></div>
+        <p class="brand">iPhone Photo Fix</p>
+      </div>
+    </header>
+
+    <main class="shell">
+      <article class="guide-card">
+        <h1>What is HEIC? (plain-English version)</h1>
+        <p>
+          HEIC is the photo format iPhone uses by default. It helps save space while keeping image quality high.
+        </p>
+        <figure class="guide-hero">
+          <img
+            src="./assets/guides/iphone-heic.jpg"
+            alt="Smartphone screen showing modern mobile photography"
+            loading="lazy"
+            decoding="async"
+            width="1400"
+            height="1400"
+          />
+          <figcaption>Photo source: Unsplash.</figcaption>
+        </figure>
+
+        <h2>So why do people run into problems?</h2>
+        <p>
+          Because not every website, app, or older device supports HEIC yet. The image is fine, but the destination
+          tool may reject it.
+        </p>
+
+        <h2>When should I convert it?</h2>
+        <ul>
+          <li>When a website says your photo type is unsupported.</li>
+          <li>When someone asks you to send JPG files.</li>
+          <li>When you are uploading to school, work, or government forms.</li>
+        </ul>
+
+        <h2>Which format should I convert to?</h2>
+        <ul>
+          <li>JPG: best default for sharing.</li>
+          <li>PNG: best for screenshots and text-heavy images.</li>
+          <li>WebP: best when smaller size matters.</li>
+          <li>PDF: best for print or document-style submissions.</li>
+        </ul>
+
+        <p>
+          Need to fix one right now? <a href="./index.html">Use the converter</a>.
+        </p>
+      </article>
+
+      <a class="guide-back" href="./index.html">← Back to converter</a>
+    </main>
+
+    <footer class="site-footer">
+      <p>© <span id="year"></span> iPhone Photo Fix</p>
+    </footer>
+
+    <script>
+      document.getElementById("year").textContent = String(new Date().getFullYear());
+    </script>
+  </body>
+</html>
