@@ -322,6 +322,12 @@
         source,
       });
       triggerDownload(complete[0].outputBlob, complete[0].outputName);
+      trackEvent("download_success", {
+        file_count: 1,
+        output_format: complete[0].format,
+        download_type: "single_file",
+        source,
+      });
       return;
     }
 
@@ -357,6 +363,7 @@
         file_count: complete.length,
         output_format: "mixed_or_batch",
         download_type: "zip",
+        source,
       });
     } catch (error) {
       summary.textContent =
@@ -445,6 +452,12 @@
         output_format: complete[0].format,
       });
       triggerDownload(complete[0].outputBlob, complete[0].outputName);
+      trackEvent("download_success", {
+        file_count: 1,
+        output_format: complete[0].format,
+        download_type: "single_file",
+        source: "share_fallback",
+      });
       return;
     }
 
@@ -500,6 +513,12 @@
       output_format: job.format,
     });
     triggerDownload(job.outputBlob, job.outputName);
+    trackEvent("download_success", {
+      file_count: 1,
+      output_format: job.format,
+      download_type: "single_file",
+      source: "share_fallback",
+    });
     render();
   }
 
@@ -664,7 +683,24 @@
       return;
     }
     try {
-      window.gtag("event", name, params || {});
+      const payload = params || {};
+      window.gtag("event", name, payload);
+
+      // Business-friendly aliases for cleaner GA reporting.
+      const aliases = [];
+      if (name === "photos_selected") {
+        aliases.push("files_added");
+      } else if (name === "conversion_success") {
+        aliases.push("conversion_completed");
+      } else if (name === "share_success") {
+        aliases.push("share_completed");
+      } else if (name === "download_success") {
+        aliases.push("save_completed");
+      }
+
+      aliases.forEach((aliasName) => {
+        window.gtag("event", aliasName, payload);
+      });
     } catch (error) {
       // Silently ignore analytics errors to avoid impacting conversion flow.
     }
@@ -799,6 +835,12 @@
             source: "file_details",
           });
           triggerDownload(job.outputBlob, job.outputName);
+          trackEvent("download_success", {
+            file_count: 1,
+            output_format: job.format,
+            download_type: "single_file",
+            source: "file_details",
+          });
         }
       });
 
